@@ -1,7 +1,9 @@
 
+CFLAGS = -W -Wall -pedantic -Ofast
+
 .PHONY: test
 test: testbench
-	./testbench
+	./testbench 5 3
 
 .PHONY: tables
 tables: generate
