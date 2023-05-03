@@ -31,17 +31,17 @@ int main(int argc, char **argv)
 		numbers[i] = numbers[j];
 		numbers[j] = tmp;
 	}
-	int nibs = len * k;
-	uint8_t orig[nibs];
-	for (int i = 0; i < nibs; i++)
-		orig[i] = rand() % 16;
-	uint8_t blocks[nibs];
+	int bytes = len * k;
+	uint8_t orig[bytes];
+	for (int i = 0; i < bytes; i++)
+		orig[i] = rand() % 256;
+	uint8_t blocks[bytes];
 	for (int i = 0; i < k; i++)
 		gf16_crs_encode16(orig, blocks + i * len, numbers[i], k);
-	uint8_t data[nibs];
+	uint8_t data[bytes];
 	for (int i = 0; i < k; i++)
 		gf16_crs_decode16(data + i * len, blocks, numbers, i, k);
-	for (int i = 0; i < nibs; i++)
+	for (int i = 0; i < bytes; i++)
 		assert(data[i] == orig[i]);
 	return 0;
 }

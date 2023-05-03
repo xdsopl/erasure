@@ -53,13 +53,13 @@ static inline void gf16_mul16(uint8_t *c, const uint8_t *a, int b)
 {
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < 16; i++)
-		c[i] = lut[a[i]];
+		c[i] = (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
 }
 
 static inline void gf16_mac16(uint8_t *c, const uint8_t *a, int b)
 {
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < 16; i++)
-		c[i] ^= lut[a[i]];
+		c[i] ^= (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
 }
 
