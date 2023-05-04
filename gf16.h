@@ -56,12 +56,12 @@ static inline int gf16_div(int a, int b)
 	return gf16_mul(a, gf16_inv(b));
 }
 
-static inline void gf16_mul_block(uint8_t *c, const uint8_t *a, int b, int n)
+static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size, int init)
 {
 #ifdef __ARM_NEON__
 	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
 	uint8x8x2_t lut = {{ vget_low_u8(l16), vget_high_u8(l16) }};
-	for (int i = 0; i < n; i += 16, a += 16, c += 16) {
+	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
 		uint8x16_t a16 = vld1q_u8(__builtin_assume_aligned(a, 16));
 		uint8x16_t aln = vandq_u8(a16, vdupq_n_u8(15));
 		uint8x8_t cll = vtbl2_u8(lut, vget_low_u8(aln));
@@ -72,64 +72,28 @@ static inline void gf16_mul_block(uint8_t *c, const uint8_t *a, int b, int n)
 		uint8x8_t chh = vtbl2_u8(lut, vget_high_u8(ahn));
 		uint8x16_t chn = vcombine_u8(chl, chh);
 		uint8x16_t c16 = vorrq_u8(cln, vshlq_n_u8(chn, 4));
+		if (!init)
+			c16 = veorq_u8(c16, vld1q_u8(__builtin_assume_aligned(c, 16)));
 		vst1q_u8(__builtin_assume_aligned(c, 16), c16);
 	}
 #else
 #ifdef __SSE4_1__
 	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
-	for (int i = 0; i < n; i += 16, a += 16, c += 16) {
+	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
 		__m128i a16 = _mm_load_si128(__builtin_assume_aligned(a, 16));
 		__m128i aln = _mm_and_si128(a16, _mm_set1_epi8(15));
 		__m128i cln = _mm_shuffle_epi8(l16, aln);
 		__m128i ahn = _mm_and_si128(_mm_srli_epi16(a16, 4), _mm_set1_epi8(15));
 		__m128i chn = _mm_shuffle_epi8(l16, ahn);
 		__m128i c16 = _mm_or_si128(cln, _mm_slli_epi16(chn, 4));
+		if (!init)
+			c16 = _mm_xor_si128(c16, _mm_load_si128(__builtin_assume_aligned(c, 16)));
 		_mm_store_si128(__builtin_assume_aligned(c, 16), c16);
 	}
 #else
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
-	for (int i = 0; i < n; i++)
-		c[i] = (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
-#endif
-#endif
-}
-
-static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int n)
-{
-#ifdef __ARM_NEON__
-	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
-	uint8x8x2_t lut = {{ vget_low_u8(l16), vget_high_u8(l16) }};
-	for (int i = 0; i < n; i += 16, a += 16, c += 16) {
-		uint8x16_t a16 = vld1q_u8(__builtin_assume_aligned(a, 16));
-		uint8x16_t aln = vandq_u8(a16, vdupq_n_u8(15));
-		uint8x8_t cll = vtbl2_u8(lut, vget_low_u8(aln));
-		uint8x8_t clh = vtbl2_u8(lut, vget_high_u8(aln));
-		uint8x16_t cln = vcombine_u8(cll, clh);
-		uint8x16_t ahn = vshrq_n_u8(a16, 4);
-		uint8x8_t chl = vtbl2_u8(lut, vget_low_u8(ahn));
-		uint8x8_t chh = vtbl2_u8(lut, vget_high_u8(ahn));
-		uint8x16_t chn = vcombine_u8(chl, chh);
-		uint8x16_t c16 = vld1q_u8(__builtin_assume_aligned(c, 16));
-		uint8x16_t abc = veorq_u8(c16, vorrq_u8(cln, vshlq_n_u8(chn, 4)));
-		vst1q_u8(__builtin_assume_aligned(c, 16), abc);
-	}
-#else
-#ifdef __SSE4_1__
-	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
-	for (int i = 0; i < n; i += 16, a += 16, c += 16) {
-		__m128i a16 = _mm_load_si128(__builtin_assume_aligned(a, 16));
-		__m128i aln = _mm_and_si128(a16, _mm_set1_epi8(15));
-		__m128i cln = _mm_shuffle_epi8(l16, aln);
-		__m128i ahn = _mm_and_si128(_mm_srli_epi16(a16, 4), _mm_set1_epi8(15));
-		__m128i chn = _mm_shuffle_epi8(l16, ahn);
-		__m128i c16 = _mm_load_si128(__builtin_assume_aligned(c, 16));
-		__m128i abc = _mm_xor_si128(c16, _mm_or_si128(cln, _mm_slli_epi16(chn, 4)));
-		_mm_store_si128(__builtin_assume_aligned(c, 16), abc);
-	}
-#else
-	const uint8_t *lut = gf16_mul_lut + 16 * b;
-	for (int i = 0; i < n; i++)
-		c[i] ^= (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
+	for (int i = 0; i < size; i++)
+		c[i] = (init ? 0 : c[i]) ^ ((lut[a[i] >> 4] << 4) | lut[a[i] & 15]);
 #endif
 #endif
 }

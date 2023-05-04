@@ -33,10 +33,7 @@ static inline void gf16_crs_encode(const uint8_t *data, uint8_t *block, int numb
 {
 	for (int k = 0; k < count; k++) {
 		int a_ik = gf16_cauchy_matrix(number, k);
-		if (k)
-			gf16_mac_block(block, data + size * k, a_ik, size);
-		else
-			gf16_mul_block(block, data + size * k, a_ik, size);
+		gf16_mac_block(block, data + size * k, a_ik, size, !k);
 	}
 }
 
@@ -44,10 +41,7 @@ static inline void gf16_crs_decode(uint8_t *data, const uint8_t *blocks, const i
 {
 	for (int k = 0; k < count; k++) {
 		int b_ik = gf16_inverse_cauchy_matrix(numbers, index, k, count);
-		if (k)
-			gf16_mac_block(data, blocks + size * k, b_ik, size);
-		else
-			gf16_mul_block(data, blocks + size * k, b_ik, size);
+		gf16_mac_block(data, blocks + size * k, b_ik, size, !k);
 	}
 }
 
