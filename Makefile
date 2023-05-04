@@ -1,6 +1,8 @@
 
 CFLAGS = -W -Wall -pedantic -Ofast
 
+CC = clang -march=native
+
 #CC = armv7a-hardfloat-linux-gnueabi-gcc -static -mfpu=neon -march=armv7-a
 #QEMU = qemu-arm
 
