@@ -17,8 +17,7 @@ int main(int argc, char **argv)
 		return 1;
 	int k = atoi(argv[1]);
 	int m = atoi(argv[2]);
-	int len = 16;
-	if (k < 0 || m < 0 || 2 * k + m > len)
+	if (k < 0 || m < 0 || 2 * k + m > 16)
 		return 1;
 	int n = k + m;
 	int numbers[n];
@@ -31,18 +30,19 @@ int main(int argc, char **argv)
 		numbers[i] = numbers[j];
 		numbers[j] = tmp;
 	}
-	int bytes = len * k;
+	int size = 4096;
+	int bytes = size * k;
 	uint8_t orig[bytes] __attribute__((aligned(16)));
 	for (int i = 0; i < bytes; i++)
 		orig[i] = rand() % 256;
 	clock_t time_a = clock();
 	uint8_t blocks[bytes] __attribute__((aligned(16)));
 	for (int i = 0; i < k; i++)
-		gf16_crs_encode16(orig, blocks + i * len, numbers[i], k);
+		gf16_crs_encode(orig, blocks + i * size, numbers[i], k, size);
 	clock_t time_b = clock();
 	uint8_t data[bytes] __attribute__((aligned(16)));
 	for (int i = 0; i < k; i++)
-		gf16_crs_decode16(data + i * len, blocks, numbers, i, k);
+		gf16_crs_decode(data + i * size, blocks, numbers, i, k, size);
 	clock_t time_c = clock();
 	double us_enc = (time_b - time_a) / (CLOCKS_PER_SEC / 1000000.0);
 	double us_dec = (time_c - time_b) / (CLOCKS_PER_SEC / 1000000.0);
