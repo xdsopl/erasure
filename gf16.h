@@ -6,6 +6,10 @@ Copyright 2023 Ahmet Inan <xdsopl@gmail.com>
 
 #pragma once
 
+#ifdef __ARM_NEON__
+#include <arm_neon.h>
+#endif
+
 static inline int gf16_add(int a, int b)
 {
 	return a ^ b;
@@ -51,9 +55,25 @@ static inline int gf16_div(int a, int b)
 
 static inline void gf16_mul16(uint8_t *c, const uint8_t *a, int b)
 {
+#ifdef __ARM_NEON__
+	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
+	uint8x8x2_t lut = {{ vget_low_u8(l16), vget_high_u8(l16) }};
+	uint8x16_t a16 = vld1q_u8(__builtin_assume_aligned(a, 16));
+	uint8x16_t aln = vandq_u8(a16, vdupq_n_u8(15));
+	uint8x8_t cll = vtbl2_u8(lut, vget_low_u8(aln));
+	uint8x8_t clh = vtbl2_u8(lut, vget_high_u8(aln));
+	uint8x16_t cln = vcombine_u8(cll, clh);
+	uint8x16_t ahn = vshrq_n_u8(a16, 4);
+	uint8x8_t chl = vtbl2_u8(lut, vget_low_u8(ahn));
+	uint8x8_t chh = vtbl2_u8(lut, vget_high_u8(ahn));
+	uint8x16_t chn = vcombine_u8(chl, chh);
+	uint8x16_t c16 = vorrq_u8(cln, vshlq_n_u8(chn, 4));
+	vst1q_u8(__builtin_assume_aligned(c, 16), c16);
+#else
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < 16; i++)
 		c[i] = (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
+#endif
 }
 
 static inline void gf16_mac16(uint8_t *c, const uint8_t *a, int b)

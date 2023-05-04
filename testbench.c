@@ -32,15 +32,15 @@ int main(int argc, char **argv)
 		numbers[j] = tmp;
 	}
 	int bytes = len * k;
-	uint8_t orig[bytes];
+	uint8_t orig[bytes] __attribute__((aligned(16)));
 	for (int i = 0; i < bytes; i++)
 		orig[i] = rand() % 256;
 	clock_t time_a = clock();
-	uint8_t blocks[bytes];
+	uint8_t blocks[bytes] __attribute__((aligned(16)));
 	for (int i = 0; i < k; i++)
 		gf16_crs_encode16(orig, blocks + i * len, numbers[i], k);
 	clock_t time_b = clock();
-	uint8_t data[bytes];
+	uint8_t data[bytes] __attribute__((aligned(16)));
 	for (int i = 0; i < k; i++)
 		gf16_crs_decode16(data + i * len, blocks, numbers, i, k);
 	clock_t time_c = clock();
