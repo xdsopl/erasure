@@ -44,10 +44,10 @@ int main(int argc, char **argv)
 	for (int i = 0; i < k; i++)
 		gf16_crs_decode(data + i * size, blocks, numbers, i, k, size);
 	clock_t time_c = clock();
-	double us_enc = (time_b - time_a) / (CLOCKS_PER_SEC / 1000000.0);
-	double us_dec = (time_c - time_b) / (CLOCKS_PER_SEC / 1000000.0);
-	fprintf(stderr, "encoding time: %f us\n", us_enc);
-	fprintf(stderr, "decoding time: %f us\n", us_dec);
+	int bps_enc = (bytes * CLOCKS_PER_SEC) / (time_b - time_a);
+	int bps_dec = (bytes * CLOCKS_PER_SEC) / (time_c - time_b);
+	fprintf(stderr, "encoding speed: %d kilobytes / second\n", bps_enc / 1000);
+	fprintf(stderr, "decoding speed: %d kilobytes / second\n", bps_dec / 1000);
 	for (int i = 0; i < bytes; i++)
 		assert(data[i] == orig[i]);
 	return 0;
