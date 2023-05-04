@@ -9,6 +9,9 @@ Copyright 2023 Ahmet Inan <xdsopl@gmail.com>
 #ifdef __ARM_NEON__
 #include <arm_neon.h>
 #endif
+#ifdef __SSE4_1__
+#include <smmintrin.h>
+#endif
 
 static inline int gf16_add(int a, int b)
 {
@@ -72,9 +75,22 @@ static inline void gf16_mul_block(uint8_t *c, const uint8_t *a, int b, int n)
 		vst1q_u8(__builtin_assume_aligned(c, 16), c16);
 	}
 #else
+#ifdef __SSE4_1__
+	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
+	for (int i = 0; i < n; i += 16, a += 16, c += 16) {
+		__m128i a16 = _mm_load_si128(__builtin_assume_aligned(a, 16));
+		__m128i aln = _mm_and_si128(a16, _mm_set1_epi8(15));
+		__m128i cln = _mm_shuffle_epi8(l16, aln);
+		__m128i ahn = _mm_and_si128(_mm_srli_epi16(a16, 4), _mm_set1_epi8(15));
+		__m128i chn = _mm_shuffle_epi8(l16, ahn);
+		__m128i c16 = _mm_or_si128(cln, _mm_slli_epi16(chn, 4));
+		_mm_store_si128(__builtin_assume_aligned(c, 16), c16);
+	}
+#else
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < n; i++)
 		c[i] = (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
+#endif
 #endif
 }
 
@@ -98,9 +114,23 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int n)
 		vst1q_u8(__builtin_assume_aligned(c, 16), abc);
 	}
 #else
+#ifdef __SSE4_1__
+	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
+	for (int i = 0; i < n; i += 16, a += 16, c += 16) {
+		__m128i a16 = _mm_load_si128(__builtin_assume_aligned(a, 16));
+		__m128i aln = _mm_and_si128(a16, _mm_set1_epi8(15));
+		__m128i cln = _mm_shuffle_epi8(l16, aln);
+		__m128i ahn = _mm_and_si128(_mm_srli_epi16(a16, 4), _mm_set1_epi8(15));
+		__m128i chn = _mm_shuffle_epi8(l16, ahn);
+		__m128i c16 = _mm_load_si128(__builtin_assume_aligned(c, 16));
+		__m128i abc = _mm_xor_si128(c16, _mm_or_si128(cln, _mm_slli_epi16(chn, 4)));
+		_mm_store_si128(__builtin_assume_aligned(c, 16), abc);
+	}
+#else
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < n; i++)
 		c[i] ^= (lut[a[i] >> 4] << 4) | lut[a[i] & 15];
+#endif
 #endif
 }
 
