@@ -6,7 +6,7 @@ Copyright 2023 Ahmet Inan <xdsopl@gmail.com>
 
 #pragma once
 
-#ifdef __ARM_NEON__
+#ifdef __ARM_NEON
 #include <arm_neon.h>
 #endif
 #ifdef __SSE4_1__
@@ -58,7 +58,7 @@ static inline int gf16_div(int a, int b)
 
 static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size, int init)
 {
-#ifdef __ARM_NEON__
+#ifdef __ARM_NEON
 	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
 	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
 		uint8x16_t a16 = vld1q_u8(__builtin_assume_aligned(a, 16));
