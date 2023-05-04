@@ -60,17 +60,22 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size,
 {
 #ifdef __ARM_NEON__
 	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
-	uint8x8x2_t lut = {{ vget_low_u8(l16), vget_high_u8(l16) }};
 	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
 		uint8x16_t a16 = vld1q_u8(__builtin_assume_aligned(a, 16));
 		uint8x16_t aln = vandq_u8(a16, vdupq_n_u8(15));
-		uint8x8_t cll = vtbl2_u8(lut, vget_low_u8(aln));
-		uint8x8_t clh = vtbl2_u8(lut, vget_high_u8(aln));
-		uint8x16_t cln = vcombine_u8(cll, clh);
 		uint8x16_t ahn = vshrq_n_u8(a16, 4);
-		uint8x8_t chl = vtbl2_u8(lut, vget_low_u8(ahn));
-		uint8x8_t chh = vtbl2_u8(lut, vget_high_u8(ahn));
+#ifdef __aarch64__
+		uint8x16_t cln = vqtbl1q_u8(l16, aln);
+		uint8x16_t chn = vqtbl1q_u8(l16, ahn);
+#else
+		uint8x8x2_t l82 = {{ vget_low_u8(l16), vget_high_u8(l16) }};
+		uint8x8_t cll = vtbl2_u8(l82, vget_low_u8(aln));
+		uint8x8_t clh = vtbl2_u8(l82, vget_high_u8(aln));
+		uint8x16_t cln = vcombine_u8(cll, clh);
+		uint8x8_t chl = vtbl2_u8(l82, vget_low_u8(ahn));
+		uint8x8_t chh = vtbl2_u8(l82, vget_high_u8(ahn));
 		uint8x16_t chn = vcombine_u8(chl, chh);
+#endif
 		uint8x16_t c16 = vorrq_u8(cln, vshlq_n_u8(chn, 4));
 		if (!init)
 			c16 = veorq_u8(c16, vld1q_u8(__builtin_assume_aligned(c, 16)));
