@@ -35,12 +35,19 @@ int main(int argc, char **argv)
 	uint8_t orig[bytes];
 	for (int i = 0; i < bytes; i++)
 		orig[i] = rand() % 256;
+	clock_t time_a = clock();
 	uint8_t blocks[bytes];
 	for (int i = 0; i < k; i++)
 		gf16_crs_encode16(orig, blocks + i * len, numbers[i], k);
+	clock_t time_b = clock();
 	uint8_t data[bytes];
 	for (int i = 0; i < k; i++)
 		gf16_crs_decode16(data + i * len, blocks, numbers, i, k);
+	clock_t time_c = clock();
+	double us_enc = (time_b - time_a) / (CLOCKS_PER_SEC / 1000000.0);
+	double us_dec = (time_c - time_b) / (CLOCKS_PER_SEC / 1000000.0);
+	fprintf(stderr, "encoding time: %f us\n", us_enc);
+	fprintf(stderr, "decoding time: %f us\n", us_dec);
 	for (int i = 0; i < bytes; i++)
 		assert(data[i] == orig[i]);
 	return 0;
