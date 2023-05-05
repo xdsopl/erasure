@@ -6,7 +6,7 @@ CC = clang -march=native
 #CC = armv7a-hardfloat-linux-gnueabi-gcc -static -mfpu=neon -march=armv7-a
 #QEMU = qemu-arm
 
-#CC = aarch64-unknown-linux-gnu-gcc -static
+#CC = aarch64-unknown-linux-gnu-gcc -static -march=armv8-a+crc+simd -mtune=cortex-a72
 #QEMU = qemu-aarch64
 
 .PHONY: test
