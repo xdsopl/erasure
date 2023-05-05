@@ -9,8 +9,12 @@ Copyright 2023 Ahmet Inan <xdsopl@gmail.com>
 #ifdef __ARM_NEON
 #include <arm_neon.h>
 #endif
+#ifdef __AVX2__
+#include <immintrin.h>
+#else
 #ifdef __SSE4_1__
 #include <smmintrin.h>
+#endif
 #endif
 
 static inline int gf16_add(int a, int b)
@@ -82,6 +86,20 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size,
 		vst1q_u8(__builtin_assume_aligned(c, 16), c16);
 	}
 #else
+#ifdef __AVX2__
+	__m256i l162 = _mm256_broadcastsi128_si256(_mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16)));
+	for (int i = 0; i < size; i += 32, a += 32, c += 32) {
+		__m256i a32 = _mm256_load_si256(__builtin_assume_aligned(a, 32));
+		__m256i aln = _mm256_and_si256(a32, _mm256_set1_epi8(15));
+		__m256i cln = _mm256_shuffle_epi8(l162, aln);
+		__m256i ahn = _mm256_and_si256(_mm256_srli_epi16(a32, 4), _mm256_set1_epi8(15));
+		__m256i chn = _mm256_shuffle_epi8(l162, ahn);
+		__m256i c32 = _mm256_or_si256(cln, _mm256_slli_epi16(chn, 4));
+		if (!init)
+			c32 = _mm256_xor_si256(c32, _mm256_load_si256(__builtin_assume_aligned(c, 32)));
+		_mm256_store_si256(__builtin_assume_aligned(c, 32), c32);
+	}
+#else
 #ifdef __SSE4_1__
 	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
 	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
@@ -99,6 +117,7 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size,
 	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < size; i++)
 		c[i] = (init ? 0 : c[i]) ^ ((lut[a[i] >> 4] << 4) | lut[a[i] & 15]);
+#endif
 #endif
 #endif
 }

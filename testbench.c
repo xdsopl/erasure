@@ -11,6 +11,12 @@ Copyright 2023 Ahmet Inan <xdsopl@gmail.com>
 #include <time.h>
 #include "crs.h"
 
+#ifdef __AVX2__
+#define ALIGN 32
+#else
+#define ALIGN 16
+#endif
+
 int main(int argc, char **argv)
 {
 	if (argc != 3)
@@ -31,16 +37,17 @@ int main(int argc, char **argv)
 		numbers[j] = tmp;
 	}
 	int size = 4096;
+	assert(size % ALIGN == 0);
 	int bytes = size * k;
-	uint8_t orig[bytes] __attribute__((aligned(16)));
+	uint8_t orig[bytes] __attribute__((aligned(ALIGN)));
 	for (int i = 0; i < bytes; i++)
 		orig[i] = rand() % 256;
 	clock_t time_a = clock();
-	uint8_t blocks[bytes] __attribute__((aligned(16)));
+	uint8_t blocks[bytes] __attribute__((aligned(ALIGN)));
 	for (int i = 0; i < k; i++)
 		gf16_crs_encode(orig, blocks + i * size, numbers[i], k, size);
 	clock_t time_b = clock();
-	uint8_t data[bytes] __attribute__((aligned(16)));
+	uint8_t data[bytes] __attribute__((aligned(ALIGN)));
 	for (int i = 0; i < k; i++)
 		gf16_crs_decode(data + i * size, blocks, numbers, i, k, size);
 	clock_t time_c = clock();
