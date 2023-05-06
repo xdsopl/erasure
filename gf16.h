@@ -62,8 +62,9 @@ static inline int gf16_div(int a, int b)
 
 static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size, int init)
 {
+	const uint8_t *lut = gf16_mul_lut + 16 * b;
 #ifdef __ARM_NEON
-	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
+	uint8x16_t l16 = vld1q_u8(__builtin_assume_aligned(lut, 16));
 	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
 		uint8x16_t a16 = vld1q_u8(__builtin_assume_aligned(a, 16));
 		uint8x16_t aln = vandq_u8(a16, vdupq_n_u8(15));
@@ -87,7 +88,8 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size,
 	}
 #else
 #ifdef __AVX2__
-	__m256i l162 = _mm256_broadcastsi128_si256(_mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16)));
+	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(lut, 16));
+	__m256i l162 = _mm256_broadcastsi128_si256(l16);
 	for (int i = 0; i < size; i += 32, a += 32, c += 32) {
 		__m256i a32 = _mm256_load_si256(__builtin_assume_aligned(a, 32));
 		__m256i aln = _mm256_and_si256(a32, _mm256_set1_epi8(15));
@@ -101,7 +103,7 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size,
 	}
 #else
 #ifdef __SSE4_1__
-	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(gf16_mul_lut + 16 * b, 16));
+	__m128i l16 = _mm_load_si128(__builtin_assume_aligned(lut, 16));
 	for (int i = 0; i < size; i += 16, a += 16, c += 16) {
 		__m128i a16 = _mm_load_si128(__builtin_assume_aligned(a, 16));
 		__m128i aln = _mm_and_si128(a16, _mm_set1_epi8(15));
@@ -114,7 +116,6 @@ static inline void gf16_mac_block(uint8_t *c, const uint8_t *a, int b, int size,
 		_mm_store_si128(__builtin_assume_aligned(c, 16), c16);
 	}
 #else
-	const uint8_t *lut = gf16_mul_lut + 16 * b;
 	for (int i = 0; i < size; i++)
 		c[i] = (init ? 0 : c[i]) ^ ((lut[a[i] >> 4] << 4) | lut[a[i] & 15]);
 #endif
