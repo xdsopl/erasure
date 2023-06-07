@@ -10,16 +10,16 @@ Copyright 2023 Ahmet Inan <xdsopl@gmail.com>
 
 static inline int gf16_cauchy_matrix(int i, int j)
 {
-	int row = i, col = 15 - j;
+	int row = i, col = j;
 	return gf16_inv(gf16_add(row, col));
 }
 
 static inline int gf16_inverse_cauchy_matrix(const int *rows, int i, int j, int n)
 {
-	int col_i = 15 - i;
+	int col_i = i;
 	int prod_xy = 1, prod_x = 1, prod_y = 1;
 	for (int k = 0; k < n; k++) {
-		int col_k = 15 - k;
+		int col_k = k;
 		prod_xy = gf16_mul(prod_xy, gf16_mul(gf16_add(rows[j], col_k), gf16_add(rows[k], col_i)));
 		if (k != j)
 			prod_x = gf16_mul(prod_x, gf16_add(rows[j], rows[k]));
@@ -29,18 +29,18 @@ static inline int gf16_inverse_cauchy_matrix(const int *rows, int i, int j, int 
 	return gf16_div(prod_xy, gf16_mul(gf16_mul(gf16_add(rows[j], col_i), prod_x), prod_y));
 }
 
-static inline void gf16_crs_encode(const uint8_t *data, uint8_t *block, int number, int count, int size)
+static inline void gf16_crs_encode(const uint8_t *data, uint8_t *block, int identifier, int count, int size)
 {
 	for (int k = 0; k < count; k++) {
-		int a_ik = gf16_cauchy_matrix(number, k);
+		int a_ik = gf16_cauchy_matrix(identifier, k);
 		gf16_mac_block(block, data + size * k, a_ik, size, !k);
 	}
 }
 
-static inline void gf16_crs_decode(uint8_t *data, const uint8_t *blocks, const int *numbers, int index, int count, int size)
+static inline void gf16_crs_decode(uint8_t *data, const uint8_t *blocks, const int *identifiers, int index, int count, int size)
 {
 	for (int k = 0; k < count; k++) {
-		int b_ik = gf16_inverse_cauchy_matrix(numbers, index, k, count);
+		int b_ik = gf16_inverse_cauchy_matrix(identifiers, index, k, count);
 		gf16_mac_block(data, blocks + size * k, b_ik, size, !k);
 	}
 }

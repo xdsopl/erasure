@@ -26,15 +26,15 @@ int main(int argc, char **argv)
 	if (k < 0 || m < 0 || 2 * k + m > 16)
 		return 1;
 	int n = k + m;
-	int numbers[n];
+	int identifiers[n];
 	for (int i = 0; i < n; i++)
-		numbers[i] = i;
+		identifiers[i] = k + i;
 	srand(time(0));
 	for (int i = 0; i < n - 1; i++) {
 		int j = i + rand() % (n - i);
-		int tmp = numbers[i];
-		numbers[i] = numbers[j];
-		numbers[j] = tmp;
+		int tmp = identifiers[i];
+		identifiers[i] = identifiers[j];
+		identifiers[j] = tmp;
 	}
 	int size = 4096;
 	assert(size % ALIGN == 0);
@@ -45,11 +45,11 @@ int main(int argc, char **argv)
 	clock_t time_a = clock();
 	uint8_t blocks[bytes] __attribute__((aligned(ALIGN)));
 	for (int i = 0; i < k; i++)
-		gf16_crs_encode(orig, blocks + i * size, numbers[i], k, size);
+		gf16_crs_encode(orig, blocks + i * size, identifiers[i], k, size);
 	clock_t time_b = clock();
 	uint8_t data[bytes] __attribute__((aligned(ALIGN)));
 	for (int i = 0; i < k; i++)
-		gf16_crs_decode(data + i * size, blocks, numbers, i, k, size);
+		gf16_crs_decode(data + i * size, blocks, identifiers, i, k, size);
 	clock_t time_c = clock();
 	int mbps_enc = (((long long)bytes * CLOCKS_PER_SEC) / (time_b - time_a)) >> 20;
 	int mbps_dec = (((long long)bytes * CLOCKS_PER_SEC) / (time_c - time_b)) >> 20;
